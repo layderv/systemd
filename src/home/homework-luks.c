@@ -2131,7 +2131,7 @@ int home_create_luks(
                         fstype,
                         NULL,
                         h->uid,
-                        (gid_t) h->uid);
+                        h->gid);
         if (r < 0) {
                 log_error_errno(r, "Failed to add binding to record: %m");
                 goto fail;

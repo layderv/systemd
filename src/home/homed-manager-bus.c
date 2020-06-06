@@ -372,7 +372,7 @@ static int validate_and_allocate_home(Manager *m, UserRecord *hr, Home **ret, sd
 
                 gr = getgrgid(hr->uid);
                 if (gr)
-                        return sd_bus_error_setf(error, BUS_ERROR_UID_IN_USE, "Specified UID " UID_FMT " already in use as GID by NSS group %s, refusing.", hr->uid, gr->gr_name);
+                        return sd_bus_error_setf(error, BUS_ERROR_UID_IN_USE, "Specified UID " UID_FMT " already in use as UID by NSS group %s, refusing.", hr->uid, gr->gr_name);
         } else {
                 r = manager_augment_record_with_uid(m, hr);
                 if (r < 0)

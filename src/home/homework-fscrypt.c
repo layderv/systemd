@@ -566,7 +566,7 @@ int home_create_fscrypt(
                         NULL,
                         NULL,
                         h->uid,
-                        (gid_t) h->uid);
+                        h->gid);
         if (r < 0)
                 return log_error_errno(r, "Failed to add binding to record: %m");
 

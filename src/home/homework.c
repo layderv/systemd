@@ -325,7 +325,7 @@ static int read_identity_file(int root_fd, JsonVariant **ret) {
         return 0;
 }
 
-static int write_identity_file(int root_fd, JsonVariant *v, uid_t uid) {
+static int write_identity_file(int root_fd, JsonVariant *v, uid_t uid, gid_t gid) {
         _cleanup_(json_variant_unrefp) JsonVariant *normalized = NULL;
         _cleanup_(fclosep) FILE *identity_file = NULL;
         _cleanup_close_ int identity_fd = -1;
@@ -363,7 +363,7 @@ static int write_identity_file(int root_fd, JsonVariant *v, uid_t uid) {
                 goto fail;
         }
 
-        if (fchown(fileno(identity_file), uid, uid) < 0) {
+        if (fchown(fileno(identity_file), uid, gid) < 0) {
                 log_error_errno(r, "Failed to change ownership of identity file: %m");
                 goto fail;
         }
@@ -501,7 +501,7 @@ int home_store_embedded_identity(UserRecord *h, int root_fd, uid_t uid, UserReco
         }
 
         /* The identity has changed, let's update it in the image */
-        r = write_identity_file(root_fd, embedded->json, h->uid);
+        r = write_identity_file(root_fd, embedded->json, h->uid, h->gid);
         if (r < 0)
                 return r;
 
@@ -548,20 +548,21 @@ int home_extend_embedded_identity(UserRecord *h, UserRecord *used, HomeSetup *se
                         file_system_type_fd(setup->root_fd),
                         user_record_home_directory(used),
                         used->uid,
-                        (gid_t) used->uid);
+                        used->gid);
         if (r < 0)
                 return log_error_errno(r, "Failed to update binding in record: %m");
 
         return 0;
 }
 
-static int chown_recursive_directory(int root_fd, uid_t uid) {
+static int chown_recursive_directory(int root_fd, uid_t uid, gid_t gid) {
         int r;
 
         assert(root_fd >= 0);
         assert(uid_is_valid(uid));
+        assert(gid_is_valid(gid));
 
-        r = fd_chown_recursive(root_fd, uid, (gid_t) uid, 0777);
+        r = fd_chown_recursive(root_fd, uid, gid, 0777);
         if (r < 0)
                 return log_error_errno(r, "Failed to change ownership of files and directories: %m");
         if (r == 0)
@@ -602,7 +603,7 @@ int home_refresh(
         if (r < 0)
                 return r;
 
-        r = chown_recursive_directory(setup->root_fd, h->uid);
+        r = chown_recursive_directory(setup->root_fd, h->uid, h->gid);
         if (r < 0)
                 return r;
 
@@ -770,7 +771,7 @@ int home_populate(UserRecord *h, int dir_fd) {
         if (r < 0)
                 return r;
 
-        r = chown_recursive_directory(dir_fd, h->uid);
+        r = chown_recursive_directory(dir_fd, h->uid, h->gid);
         if (r < 0)
                 return r;
 

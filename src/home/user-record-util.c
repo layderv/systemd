@@ -98,6 +98,7 @@ int user_record_synthesize(
         free_and_replace(h->home_directory, hd);
         h->storage = storage;
         h->uid = uid;
+        h->gid = gid;
 
         h->mask = USER_RECORD_REGULAR|USER_RECORD_BINDING;
         return 0;
@@ -1258,9 +1259,6 @@ int user_record_is_supported(UserRecord *hr, sd_bus_error *error) {
 
         if (hr->storage >= 0 && !IN_SET(hr->storage, USER_LUKS, USER_DIRECTORY, USER_SUBVOLUME, USER_FSCRYPT, USER_CIFS))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "User record has storage type this service cannot manage.");
-
-        if (gid_is_valid(hr->gid) && hr->uid != (uid_t) hr->gid)
-                return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "User record has to have matching UID/GID fields.");
 
         if (hr->service && !streq(hr->service, "io.systemd.Home"))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Not accepted with service not matching io.systemd.Home.");

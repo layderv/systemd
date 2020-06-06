@@ -66,10 +66,6 @@ static int suitable_home_record(UserRecord *hr) {
             uid_is_dynamic(hr->uid) || gid_is_dynamic(user_record_gid(hr)))
                 return -EADDRNOTAVAIL;
 
-        /* Insist that GID and UID match */
-        if (user_record_gid(hr) != (gid_t) hr->uid)
-                return -EBADSLT;
-
         /* Similar for the realm */
         if (hr->realm) {
                 r = suitable_realm(hr->realm);
@@ -124,6 +120,7 @@ int home_new(Manager *m, UserRecord *hr, const char *sysfs, Home **ret) {
                 .manager = m,
                 .user_name = TAKE_PTR(nm),
                 .uid = hr->uid,
+                .gid = hr->gid,
                 .state = _HOME_STATE_INVALID,
                 .worker_stdout_fd = -1,
                 .sysfs = TAKE_PTR(ns),

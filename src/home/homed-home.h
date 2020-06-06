@@ -77,6 +77,7 @@ struct Home {
         Manager *manager;
         char *user_name;
         uid_t uid;
+        gid_t gid;
 
         char *sysfs; /* When found via plugged in device, the sysfs path to it */
 

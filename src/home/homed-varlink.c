@@ -181,7 +181,7 @@ static bool home_group_match_lookup_parameters(LookupParameters *p, Home *h) {
         if (p->group_name && !streq(h->user_name, p->group_name))
                 return false;
 
-        if (gid_is_valid(p->gid) && h->uid != (uid_t) p->gid)
+        if (gid_is_valid(p->gid) && h->gid != p->gid)
                 return false;
 
         return true;
@@ -215,7 +215,7 @@ int vl_method_get_group_record(Varlink *link, JsonVariant *parameters, VarlinkMe
                 return varlink_error(link, "io.systemd.UserDatabase.BadService", NULL);
 
         if (gid_is_valid(p.gid))
-                h = hashmap_get(m->homes_by_uid, UID_TO_PTR((uid_t) p.gid));
+                h = hashmap_get(m->homes_by_uid, GID_TO_PTR(p.gid));
         else if (p.group_name)
                 h = hashmap_get(m->homes_by_name, p.group_name);
         else {

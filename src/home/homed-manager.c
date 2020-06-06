@@ -636,6 +636,7 @@ static int manager_add_home_by_image(
 
         _cleanup_(user_record_unrefp) UserRecord *hr = NULL;
         uid_t uid;
+        gid_t gid;
         Home *h;
         int r;
 
@@ -694,7 +695,12 @@ static int manager_add_home_by_image(
         if (!hr)
                 return log_oom();
 
-        r = user_record_synthesize(hr, user_name, realm, image_path, storage, uid, (gid_t) uid);
+        if (h && gid_is_valid(h->gid))
+                gid = h->gid;
+        else
+                gid = (gid_t) uid;
+
+        r = user_record_synthesize(hr, user_name, realm, image_path, storage, uid, gid);
         if (r < 0)
                 return log_error_errno(r, "Failed to synthesize home record for %s (image %s): %m", user_name, image_path);
 
@@ -721,6 +727,7 @@ int manager_augment_record_with_uid(
 
         const char *exclude_quota_path = NULL;
         uid_t start_uid = UID_INVALID, uid;
+        gid_t gid;
         int r;
 
         assert(m);
@@ -751,6 +758,10 @@ int manager_augment_record_with_uid(
                 return r;
 
         log_debug("Acquired new UID " UID_FMT " for %s.", uid, hr->user_name);
+        if (! gid_is_valid(hr->gid))
+                gid = (gid_t) uid;
+        else
+                gid = hr->gid;
 
         r = user_record_add_binding(
                         hr,
@@ -765,7 +776,7 @@ int manager_augment_record_with_uid(
                         NULL,
                         NULL,
                         uid,
-                        (gid_t) uid);
+                        gid);
         if (r < 0)
                 return r;
 

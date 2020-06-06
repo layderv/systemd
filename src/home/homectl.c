@@ -2172,6 +2172,7 @@ static int help(int argc, char *argv[], void *userdata) {
                "     --icon-name=NAME         Icon name for user\n"
                "  -d --home-dir=PATH          Home directory\n"
                "  -u --uid=UID                Numeric UID for user\n"
+               "  -g --gid=GID                Numeric GID for user\n"
                "  -G --member-of=GROUP        Add user to group\n"
                "     --skel=PATH              Skeleton directory to use\n"
                "     --shell=PATH             Shell for account\n"
@@ -2350,6 +2351,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "icon-name",                   required_argument, NULL, ARG_ICON_NAME                   },
                 { "home-dir",                    required_argument, NULL, 'd'                             }, /* Compatible with useradd(8) */
                 { "uid",                         required_argument, NULL, 'u'                             }, /* Compatible with useradd(8) */
+                { "gid",                         required_argument, NULL, 'g'                             }, /* Compatible with useradd(8) */
                 { "member-of",                   required_argument, NULL, 'G'                             },
                 { "groups",                      required_argument, NULL, 'G'                             }, /* Compat alias to keep thing in sync with useradd(8) */
                 { "skel",                        required_argument, NULL, 'k'                             }, /* Compatible with useradd(8) */
@@ -2418,7 +2420,7 @@ static int parse_argv(int argc, char *argv[]) {
         for (;;) {
                 int c;
 
-                c = getopt_long(argc, argv, "hH:M:I:c:d:u:k:s:e:G:jPE", options, NULL);
+                c = getopt_long(argc, argv, "hH:M:I:c:d:u:g:k:s:e:G:jPE", options, NULL);
                 if (c < 0)
                         break;
 
@@ -2687,6 +2689,34 @@ static int parse_argv(int argc, char *argv[]) {
                                 return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "UID " UID_FMT " is nobody UID, refusing.", uid);
 
                         r = json_variant_set_field_unsigned(&arg_identity_extra, "uid", uid);
+                        if (r < 0)
+                                return log_error_errno(r, "Failed to set realm field: %m");
+
+                        break;
+                }
+
+                case 'g': {
+                        gid_t gid;
+
+                        if (isempty(optarg)) {
+                                r = drop_from_identity("gid");
+                                if (r < 0)
+                                        return r;
+                                break;
+                        }
+
+                        r = parse_gid(optarg, &gid);
+                        if (r < 0)
+                                return log_error_errno(r, "Failed to parse GID '%s'.", optarg);
+
+                        if (gid_is_system(gid))
+                                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "GID " GID_FMT " is in system range, refusing.", gid);
+                        if (gid_is_dynamic(gid))
+                                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "GID " GID_FMT " is in dynamic range, refusing.", gid);
+                        if (gid == GID_NOBODY)
+                                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "GID " GID_FMT " is nobody GID, refusing.", gid);
+
+                        r = json_variant_set_field_unsigned(&arg_identity_extra, "gid", gid);
                         if (r < 0)
                                 return log_error_errno(r, "Failed to set realm field: %m");
 
