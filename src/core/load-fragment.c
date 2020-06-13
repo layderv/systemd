@@ -123,6 +123,7 @@ DEFINE_CONFIG_PARSE_ENUM(config_parse_protect_system, protect_system, ProtectSys
 DEFINE_CONFIG_PARSE_ENUM(config_parse_runtime_preserve_mode, exec_preserve_mode, ExecPreserveMode, "Failed to parse runtime directory preserve mode");
 DEFINE_CONFIG_PARSE_ENUM(config_parse_service_type, service_type, ServiceType, "Failed to parse service type");
 DEFINE_CONFIG_PARSE_ENUM(config_parse_service_restart, service_restart, ServiceRestart, "Failed to parse service restart specifier");
+DEFINE_CONFIG_PARSE_ENUM(config_parse_service_timeout_failure_mode, service_timeout_failure_mode, ServiceTimeoutFailureMode, "Failed to parse timeout failure mode");
 DEFINE_CONFIG_PARSE_ENUM(config_parse_socket_bind, socket_address_bind_ipv6_only_or_bool, SocketAddressBindIPv6Only, "Failed to parse bind IPv6 only value");
 DEFINE_CONFIG_PARSE_ENUM(config_parse_oom_policy, oom_policy, OOMPolicy, "Failed to parse OOM policy");
 DEFINE_CONFIG_PARSE_ENUM_WITH_DEFAULT(config_parse_ip_tos, ip_tos, int, -1, "Failed to parse IP TOS value");
@@ -3371,6 +3372,12 @@ int config_parse_memory_limit(
         uint64_t bytes = CGROUP_LIMIT_MAX;
         int r;
 
+        if (STR_IN_SET(lvalue, "DefaultMemoryLow",
+                               "DefaultMemoryMin",
+                               "MemoryLow",
+                               "MemoryMin"))
+                bytes = CGROUP_LIMIT_MIN;
+
         if (!isempty(rvalue) && !streq(rvalue, "infinity")) {
 
                 r = parse_permille(rvalue);
@@ -3390,24 +3397,20 @@ int config_parse_memory_limit(
                 }
         }
 
+        /* Keep Memory{Low,Min} unset with empty assignment so that we fall back to DefaultMemory* which in
+         * contrast means zeroing the property. */
         if (streq(lvalue, "DefaultMemoryLow")) {
+                c->default_memory_low = bytes;
                 c->default_memory_low_set = true;
-                if (isempty(rvalue))
-                        c->default_memory_low = CGROUP_LIMIT_MIN;
-                else
-                        c->default_memory_low = bytes;
         } else if (streq(lvalue, "DefaultMemoryMin")) {
+                c->default_memory_min = bytes;
                 c->default_memory_min_set = true;
-                if (isempty(rvalue))
-                        c->default_memory_min = CGROUP_LIMIT_MIN;
-                else
-                        c->default_memory_min = bytes;
         } else if (streq(lvalue, "MemoryMin")) {
                 c->memory_min = bytes;
-                c->memory_min_set = true;
+                c->memory_min_set = !isempty(rvalue);
         } else if (streq(lvalue, "MemoryLow")) {
                 c->memory_low = bytes;
-                c->memory_low_set = true;
+                c->memory_low_set = !isempty(rvalue);
         } else if (streq(lvalue, "MemoryHigh"))
                 c->memory_high = bytes;
         else if (streq(lvalue, "MemoryMax"))
@@ -4941,6 +4944,7 @@ void unit_dump_config_items(FILE *f) {
                 { config_parse_exec,                  "PATH [ARGUMENT [...]]" },
                 { config_parse_service_type,          "SERVICETYPE" },
                 { config_parse_service_restart,       "SERVICERESTART" },
+                { config_parse_service_timeout_failure_mode, "TIMEOUTMODE" },
                 { config_parse_kill_mode,             "KILLMODE" },
                 { config_parse_signal,                "SIGNAL" },
                 { config_parse_socket_listen,         "SOCKET [...]" },

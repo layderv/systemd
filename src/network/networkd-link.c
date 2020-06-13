@@ -4086,8 +4086,8 @@ int link_save(Link *link) {
         const char *admin_state, *oper_state, *carrier_state, *address_state;
         _cleanup_free_ char *temp_path = NULL;
         _cleanup_fclose_ FILE *f = NULL;
-        Address *a;
         Route *route;
+        Address *a;
         Iterator i;
         int r;
 
@@ -4374,6 +4374,8 @@ int link_save(Link *link) {
         if (link->dhcp_lease) {
                 struct in_addr address;
                 const char *tz = NULL;
+                size_t client_id_len;
+                const void *client_id;
 
                 assert(link->network);
 
@@ -4386,6 +4388,15 @@ int link_save(Link *link) {
                         fputs("DHCP4_ADDRESS=", f);
                         serialize_in_addrs(f, &address, 1, NULL, NULL);
                         fputc('\n', f);
+                }
+
+                r = sd_dhcp_lease_get_client_id(link->dhcp_lease, &client_id, &client_id_len);
+                if (r >= 0) {
+                        _cleanup_free_ char *id = NULL;
+
+                        r = sd_dhcp_client_id_to_string(client_id, client_id_len, &id);
+                        if (r >= 0)
+                                fprintf(f, "DHCP4_CLIENT_ID=%s\n", id);
                 }
 
                 r = dhcp_lease_save(link->dhcp_lease, link->lease_file);
@@ -4407,6 +4418,19 @@ int link_save(Link *link) {
                         serialize_in_addrs(f, &address, 1, false, NULL);
                         fputc('\n', f);
                 }
+        }
+
+        if (link->dhcp6_client) {
+                _cleanup_free_ char *duid = NULL;
+                uint32_t iaid;
+
+                r = sd_dhcp6_client_get_iaid(link->dhcp6_client, &iaid);
+                if (r >= 0)
+                        fprintf(f, "DHCP6_CLIENT_IAID=0x%x\n", iaid);
+
+                r = sd_dhcp6_client_duid_as_string(link->dhcp6_client, &duid);
+                if (r >= 0)
+                        fprintf(f, "DHCP6_CLIENT_DUID=%s\n", duid);
         }
 
         r = fflush_and_check(f);

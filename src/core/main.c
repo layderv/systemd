@@ -19,6 +19,7 @@
 #include "sd-messages.h"
 
 #include "alloc-util.h"
+#include "apparmor-setup.h"
 #include "architecture.h"
 #include "build.h"
 #include "bus-error.h"
@@ -32,6 +33,7 @@
 #include "dbus.h"
 #include "def.h"
 #include "efi-random.h"
+#include "efivars.h"
 #include "emergency-action.h"
 #include "env-util.h"
 #include "exit-status.h"
@@ -2366,6 +2368,12 @@ static int initialize_security(
                 return r;
         }
 
+        r = mac_apparmor_setup();
+        if (r < 0) {
+                *ret_error_message = "Failed to load AppArmor policy";
+                return r;
+        }
+
         r = ima_setup();
         if (r < 0) {
                 *ret_error_message = "Failed to load IMA policy";
@@ -2623,6 +2631,10 @@ int main(int argc, char *argv[]) {
 
                 /* The efivarfs is now mounted, let's read the random seed off it */
                 (void) efi_take_random_seed();
+
+                /* Cache command-line options passed from EFI variables */
+                if (!skip_setup)
+                        (void) cache_efi_options_variable();
         }
 
         /* Save the original RLIMIT_NOFILE/RLIMIT_MEMLOCK so that we can reset it later when

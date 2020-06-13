@@ -1,5 +1,5 @@
 sudo: required
-dist: xenial
+dist: bionic
 services:
     - docker
 
@@ -33,10 +33,7 @@ jobs:
           install:
               - $CI_MANAGERS/debian.sh SETUP
           script:
-              - set -e
-              # Build systemd
-              - $CI_MANAGERS/debian.sh RUN
-              - set +e
+              - $CI_MANAGERS/debian.sh RUN || travis_terminate 1
           after_script:
               - $CI_MANAGERS/debian.sh CLEANUP
 
@@ -52,9 +49,7 @@ jobs:
           install:
               - $CI_MANAGERS/debian.sh SETUP
           script:
-              - set -e
-              - $CI_MANAGERS/debian.sh RUN_ASAN
-              - set +e
+              - $CI_MANAGERS/debian.sh RUN_ASAN || travis_terminate 1
           after_script:
               - $CI_MANAGERS/debian.sh CLEANUP
 
@@ -70,9 +65,7 @@ jobs:
           install:
               - $CI_MANAGERS/debian.sh SETUP
           script:
-              - set -e
-              - $CI_MANAGERS/debian.sh RUN_CLANG
-              - set +e
+              - $CI_MANAGERS/debian.sh RUN_CLANG || travis-travis_terminate 1
           after_script:
               - $CI_MANAGERS/debian.sh CLEANUP
 
@@ -88,9 +81,7 @@ jobs:
           install:
               - $CI_MANAGERS/debian.sh SETUP
           script:
-              - set -e
-              - $CI_MANAGERS/debian.sh RUN_CLANG_ASAN
-              - set +e
+              - $CI_MANAGERS/debian.sh RUN_CLANG_ASAN || travis_terminate 1
           after_script:
               - $CI_MANAGERS/debian.sh CLEANUP
 
