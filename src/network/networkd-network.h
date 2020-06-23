@@ -54,6 +54,12 @@ typedef enum KeepConfiguration {
 
 typedef struct Manager Manager;
 
+typedef struct NetworkDHCPServerEmitAddress {
+        bool emit;
+        struct in_addr *addresses;
+        size_t n_addresses;
+} NetworkDHCPServerEmitAddress;
+
 struct Network {
         Manager *manager;
 
@@ -149,28 +155,7 @@ struct Network {
 
         /* DHCP Server Support */
         bool dhcp_server;
-
-        bool dhcp_server_emit_dns;
-        struct in_addr *dhcp_server_dns;
-        unsigned n_dhcp_server_dns;
-
-        bool dhcp_server_emit_ntp;
-        struct in_addr *dhcp_server_ntp;
-        unsigned n_dhcp_server_ntp;
-
-        bool dhcp_server_emit_sip;
-        struct in_addr *dhcp_server_sip;
-        unsigned n_dhcp_server_sip;
-
-        struct in_addr *dhcp_server_pop3;
-        unsigned n_dhcp_server_pop3;
-
-        struct in_addr *dhcp_server_smtp;
-        unsigned n_dhcp_server_smtp;
-
-        struct in_addr *dhcp_server_lpr;
-        unsigned n_dhcp_server_lpr;
-
+        NetworkDHCPServerEmitAddress dhcp_server_emit[_SD_DHCP_LEASE_SERVER_TYPE_MAX];
         bool dhcp_server_emit_router;
         bool dhcp_server_emit_timezone;
         char *dhcp_server_timezone;
@@ -201,6 +186,7 @@ struct Network {
                                                   RA flag is set, see RFC 7084,
                                                   WPD-4 */
         bool dhcp6_pd_assign_prefix;
+        union in_addr_union dhcp6_delegation_prefix_token;
 
         /* Bridge Support */
         int use_bpdu;
@@ -330,10 +316,6 @@ struct Network {
         Set *dnssec_negative_trust_anchors;
 
         char **ntp;
-        char **sip;
-        char **pop3;
-        char **smtp;
-        char **lpr;
         char **bind_carrier;
 };
 

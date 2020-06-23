@@ -166,7 +166,8 @@ int network_verify(Network *network) {
         if (set_isempty(network->match_mac) && set_isempty(network->match_permanent_mac) &&
             strv_isempty(network->match_path) && strv_isempty(network->match_driver) &&
             strv_isempty(network->match_type) && strv_isempty(network->match_name) &&
-            strv_isempty(network->match_property) && strv_isempty(network->match_ssid) && !network->conditions)
+            strv_isempty(network->match_property) && strv_isempty(network->match_wlan_iftype) &&
+            strv_isempty(network->match_ssid) && !network->conditions)
                 return log_warning_errno(SYNTHETIC_ERRNO(EINVAL),
                                          "%s: No valid settings found in the [Match] section, ignoring file. "
                                          "To match all interfaces, add Name=* in the [Match] section.",
@@ -415,9 +416,10 @@ int network_load_one(Manager *manager, OrderedHashmap **networks, const char *fi
 
                 .dhcp6_pd_assign_prefix = true,
 
-                .dhcp_server_emit_dns = true,
-                .dhcp_server_emit_ntp = true,
-                .dhcp_server_emit_sip = true,
+                .dhcp_server_emit[SD_DHCP_LEASE_DNS].emit = true,
+                .dhcp_server_emit[SD_DHCP_LEASE_NTP].emit = true,
+                .dhcp_server_emit[SD_DHCP_LEASE_SIP].emit = true,
+
                 .dhcp_server_emit_router = true,
                 .dhcp_server_emit_timezone = true,
 
@@ -672,8 +674,6 @@ static Network *network_free(Network *network) {
 
         strv_free(network->ntp);
         free(network->dns);
-        strv_free(network->sip);
-        strv_free(network->smtp);
         ordered_set_free_free(network->search_domains);
         ordered_set_free_free(network->route_domains);
         strv_free(network->bind_carrier);
@@ -739,12 +739,9 @@ static Network *network_free(Network *network) {
         free(network->name);
 
         free(network->dhcp_server_timezone);
-        free(network->dhcp_server_dns);
-        free(network->dhcp_server_ntp);
-        free(network->dhcp_server_sip);
-        free(network->dhcp_server_pop3);
-        free(network->dhcp_server_smtp);
-        free(network->dhcp_server_lpr);
+
+        for (sd_dhcp_lease_server_type t = 0; t < _SD_DHCP_LEASE_SERVER_TYPE_MAX; t++)
+                free(network->dhcp_server_emit[t].addresses);
 
         set_free_free(network->dnssec_negative_trust_anchors);
 

@@ -4196,32 +4196,11 @@ int link_save(Link *link) {
                                     sd_dhcp6_lease_get_ntp_fqdn);
 
                 serialize_addresses(f, "SIP", NULL,
-                                    link->network->sip,
+                                    NULL,
                                     link->dhcp_lease,
                                     link->network->dhcp_use_sip,
                                     SD_DHCP_LEASE_SIP,
-                                    false, NULL, NULL, NULL);
-
-                serialize_addresses(f, "POP3", NULL,
-                                    link->network->pop3,
-                                    link->dhcp_lease,
-                                    true,
-                                    SD_DHCP_LEASE_POP3,
-                                    false, NULL, NULL, NULL);
-
-                serialize_addresses(f, "SMTP", NULL,
-                                    link->network->smtp,
-                                    link->dhcp_lease,
-                                    true,
-                                    SD_DHCP_LEASE_SMTP,
-                                    false, NULL, NULL, NULL);
-
-                serialize_addresses(f, "LPR", NULL,
-                                    link->network->lpr,
-                                    link->dhcp_lease,
-                                    true,
-                                    SD_DHCP_LEASE_LPR,
-                                    false, NULL, NULL, NULL);
+                                    NULL, false, NULL, NULL);
 
                 /************************************************************/
 
@@ -4372,33 +4351,6 @@ int link_save(Link *link) {
         print_link_hashmap(f, "CARRIER_BOUND_BY=", link->bound_by_links);
 
         if (link->dhcp_lease) {
-                struct in_addr address;
-                const char *tz = NULL;
-                size_t client_id_len;
-                const void *client_id;
-
-                assert(link->network);
-
-                r = sd_dhcp_lease_get_timezone(link->dhcp_lease, &tz);
-                if (r >= 0)
-                        fprintf(f, "TIMEZONE=%s\n", tz);
-
-                r = sd_dhcp_lease_get_address(link->dhcp_lease, &address);
-                if (r >= 0) {
-                        fputs("DHCP4_ADDRESS=", f);
-                        serialize_in_addrs(f, &address, 1, NULL, NULL);
-                        fputc('\n', f);
-                }
-
-                r = sd_dhcp_lease_get_client_id(link->dhcp_lease, &client_id, &client_id_len);
-                if (r >= 0) {
-                        _cleanup_free_ char *id = NULL;
-
-                        r = sd_dhcp_client_id_to_string(client_id, client_id_len, &id);
-                        if (r >= 0)
-                                fprintf(f, "DHCP4_CLIENT_ID=%s\n", id);
-                }
-
                 r = dhcp_lease_save(link->dhcp_lease, link->lease_file);
                 if (r < 0)
                         goto fail;
